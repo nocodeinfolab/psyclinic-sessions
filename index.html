@@ -304,40 +304,49 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error('Failed to fetch sessions');
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to fetch sessions');
                 }
                 
                 const data = await response.json();
                 
-                if (data.user_name) {
-                    welcomeMessage.textContent = `Welcome back, ${data.user_name}`;
-                }
+                // Update welcome message
+                welcomeMessage.textContent = `Welcome back, ${data.user_name}`;
                 
+                // Handle sessions
                 if (data.sessions && data.sessions.length > 0) {
                     renderSessions(data.sessions);
                 } else {
-                    sessionsContainer.innerHTML = `
-                        <div class="no-sessions">
-                            <div class="no-sessions-icon">
-                                <i class="far fa-calendar-alt"></i>
-                            </div>
-                            <h3>No Sessions Booked Yet</h3>
-                            <p>You haven't booked any therapy sessions yet. When you do, they'll appear here.</p>
-                        </div>
-                    `;
+                    showNoSessionsMessage();
                 }
             } catch (error) {
                 console.error('Error fetching sessions:', error);
-                sessionsContainer.innerHTML = `
-                    <div class="no-sessions">
-                        <div class="no-sessions-icon" style="color: #EF5350;">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <h3>Error Loading Sessions</h3>
-                        <p>We couldn't load your sessions at this time. Please try again later.</p>
-                    </div>
-                `;
+                showErrorMessage(error.message || 'We couldn\'t load your sessions at this time.');
             }
+        }
+
+        function showNoSessionsMessage() {
+            sessionsContainer.innerHTML = `
+                <div class="no-sessions">
+                    <div class="no-sessions-icon">
+                        <i class="far fa-calendar-alt"></i>
+                    </div>
+                    <h3>No Sessions Booked Yet</h3>
+                    <p>You haven't booked any therapy sessions yet. When you do, they'll appear here.</p>
+                </div>
+            `;
+        }
+
+        function showErrorMessage(message) {
+            sessionsContainer.innerHTML = `
+                <div class="no-sessions">
+                    <div class="no-sessions-icon" style="color: #EF5350;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h3>Error Loading Sessions</h3>
+                    <p>${message}</p>
+                </div>
+            `;
         }
         
         // Render sessions to the UI
