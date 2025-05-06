@@ -318,7 +318,7 @@
                 // PERSONALIZED WELCOME MESSAGE - FIXED VERSION
                 if (data.user_name) {
                     // Extract first name if full name is provided
-                    const firstName = data.user_name.split(' ')[0];
+                    const firstName = data.user_name[0];
                     welcomeMessage.textContent = `Welcome back, ${firstName}!`;
                 } else {
                     welcomeMessage.textContent = 'Welcome back!';
