@@ -314,23 +314,24 @@
                 }
                 
                 const data = await response.json();
+                console.log("API Response:", data);  // Debugging
                 
-                // PERSONALIZED WELCOME MESSAGE - FIXED VERSION
-                if (data.user_name) {
-                    // Extract first name if full name is provided
-                    const firstName = data.user_name.split(' ')[0];
+                // Robust name handling
+                const userName = data.user_name || data.name || data.userName;
+                if (userName?.trim()) {
+                    const firstName = userName.trim().split(/\s+/)[0];
                     welcomeMessage.textContent = `Welcome back, ${firstName}!`;
                 } else {
                     welcomeMessage.textContent = 'Welcome back!';
                 }
                 
-                if (data.sessions && data.sessions.length > 0) {
+                if (data.sessions?.length > 0) {
                     renderSessions(data.sessions);
                 } else {
                     showNoSessionsMessage();
                 }
             } catch (error) {
-                console.error('Error fetching sessions:', error);
+                console.error('Error:', error);
                 showErrorMessage(error.message || 'We couldn\'t load your sessions at this time.');
             }
         }
