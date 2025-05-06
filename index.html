@@ -314,13 +314,11 @@
                 }
                 
                 const data = await response.json();
-                console.log("API Response:", data);  // Debugging
-                
-                // Robust name handling
-                const userName = data.user_name || data.name || data.userName;
+
+                // Use the name from the first session if available
+                const userName = data.sessions?.[0]?.user_name || data.user_name;
                 if (userName?.trim()) {
-                    const firstName = userName.trim().split(/\s+/)[0];
-                    welcomeMessage.textContent = `Welcome back, ${firstName}!`;
+                    welcomeMessage.textContent = `Welcome back, ${userName.trim()}!`;
                 } else {
                     welcomeMessage.textContent = 'Welcome back!';
                 }
