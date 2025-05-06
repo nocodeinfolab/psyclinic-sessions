@@ -315,13 +315,14 @@
                 
                 const data = await response.json();
 
-                // Use the name from the first session if available
-                const userName = data.sessions?.[0]?.user_name || data.user_name;
-                if (userName?.trim()) {
-                    welcomeMessage.textContent = `Welcome back, ${userName.trim()}!`;
-                } else {
-                    welcomeMessage.textContent = 'Welcome back!';
-                }
+                // Get all unique names from sessions
+                const sessionNames = [...new Set(data.sessions?.map(s => s.user_name).filter(Boolean))];
+                // Use first session name if available, otherwise fallback to root user_name if not "User"
+                const displayName = sessionNames[0] || (data.user_name !== "User" ? data.user_name : null);
+
+                welcomeMessage.textContent = displayName ? 
+                    `Welcome back, ${displayName.trim()}!` : 
+                    'Welcome back!';
                 
                 if (data.sessions?.length > 0) {
                     renderSessions(data.sessions);
