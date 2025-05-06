@@ -309,25 +309,29 @@
                 });
                 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
+                    const errorData = await response.json();
                     throw new Error(errorData.error || 'Failed to fetch sessions');
                 }
                 
                 const data = await response.json();
                 
-                // Personalize welcome message with user's name
+                // PERSONALIZED WELCOME MESSAGE - FIXED VERSION
                 if (data.user_name) {
-                    welcomeMessage.textContent = `Welcome back, ${data.user_name.split(' ')[0]}!`;
+                    // Extract first name if full name is provided
+                    const firstName = data.user_name.split(' ')[0];
+                    welcomeMessage.textContent = `Welcome back, ${firstName}!`;
+                } else {
+                    welcomeMessage.textContent = 'Welcome back!';
                 }
                 
-                if (data.sessions?.length > 0) {
+                if (data.sessions && data.sessions.length > 0) {
                     renderSessions(data.sessions);
                 } else {
                     showNoSessionsMessage();
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showErrorMessage(error.message || 'We couldn\'t load your sessions. Please try again later.');
+                console.error('Error fetching sessions:', error);
+                showErrorMessage(error.message || 'We couldn\'t load your sessions at this time.');
             }
         }
 
