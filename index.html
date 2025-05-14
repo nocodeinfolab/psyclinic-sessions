@@ -260,6 +260,45 @@
                 width: auto;
             }
         }
+
+        #videoCallContainer {
+            display: none;
+            width: 100%;
+            height: 500px;
+            margin-top: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        
+        .session-info {
+            margin: 15px 0;
+            padding: 15px;
+            background: var(--light-gray);
+            border-radius: 10px;
+        }
+        
+        .room-number {
+            font-weight: bold;
+            color: var(--deep-blue);
+        }
+        
+        .session-timer {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        /* Adjust button styles for join session */
+        .btn-join {
+            background-color: var(--success-green);
+            color: var(--white);
+        }
+        
+        .btn-join:active {
+            background-color: #3d8b40;
+            transform: scale(0.98);
+        }
     </style>
 </head>
 <body>
@@ -277,6 +316,14 @@
             </div>
         </div>
     </div>
+
+    <div id="videoCallContainer"></div>
+    <div class="session-info">
+        <div>Room: <span class="room-number" id="roomNumberDisplay">Not connected</span></div>
+        <div>Session Time: <span class="session-timer" id="sessionTimer">00:00:00</span></div>
+    </div>
+
+
 
     <script>
         // DOM Elements
@@ -375,10 +422,16 @@
         }
         
         // Render sessions to the UI
+        // Add new variables for video call
+        let jitsiApi = null;
+        let currentRoomName = null;
+        let sessionStartTime = null;
+        let timerInterval = null;
+
+        // Modified renderSessions function to include join button
         function renderSessions(sessions) {
             sessionsContainer.innerHTML = '';
             
-            // Sort sessions by date (newest first)
             sessions.sort((a, b) => new Date(b.booked_date) - new Date(a.booked_date));
             
             if (sessions.length === 0) {
@@ -390,19 +443,19 @@
                 const sessionCard = document.createElement('div');
                 sessionCard.className = 'session-card';
                 
-                // Format date
-                const options = { 
+                const sessionDate = new Date(session.booked_date);
+                const formattedDate = sessionDate.toLocaleDateString('en-US', { 
                     weekday: 'short', 
                     month: 'short', 
                     day: 'numeric',
                     year: 'numeric'
-                };
-                const sessionDate = new Date(session.booked_date);
-                const formattedDate = sessionDate.toLocaleDateString('en-US', options);
+                });
                 
-                // Format time
                 const [startTime, endTime] = session.booked_time.split('–').map(t => t.trim());
                 const formattedTime = `${startTime} - ${endTime}`;
+                
+                // Determine if join button should be shown
+                const canJoinSession = session.confirmed && session.room_number;
                 
                 sessionCard.innerHTML = `
                     <div class="session-header">
@@ -437,20 +490,115 @@
                         </div>
                     </div>
                     <div class="session-actions">
-                        ${session.confirmed && !session.payment_made ? 
-                            `<button class="btn btn-primary" onclick="proceedToPayment('${session._id}')">
-                                <i class="fas fa-credit-card"></i> Make Payment
+                        ${canJoinSession ? 
+                            `<button class="btn btn-join" onclick="joinVideoSession('${session.room_number}')">
+                                <i class="fas fa-video"></i> Join Session
                             </button>` : 
-                            `<button class="btn btn-disabled" disabled>
-                                <i class="fas ${session.payment_made ? 'fa-check' : 'fa-clock'}"></i>
-                                ${session.payment_made ? 'Payment Complete' : 'Awaiting Confirmation'}
-                            </button>`
+                            session.confirmed && !session.payment_made ? 
+                                `<button class="btn btn-primary" onclick="proceedToPayment('${session._id}')">
+                                    <i class="fas fa-credit-card"></i> Make Payment
+                                </button>` : 
+                                `<button class="btn btn-disabled" disabled>
+                                    <i class="fas ${session.payment_made ? 'fa-check' : 'fa-clock'}"></i>
+                                    ${session.payment_made ? 'Payment Complete' : 'Awaiting Confirmation'}
+                                </button>`
                         }
                     </div>
                 `;
                 
                 sessionsContainer.appendChild(sessionCard);
             });
+        }
+
+        // Join video session function
+        function joinVideoSession(roomName) {
+            currentRoomName = roomName;
+            document.getElementById('roomNumberDisplay').textContent = roomName;
+            document.getElementById('videoCallContainer').style.display = 'block';
+            
+            const domain = 'meet.jit.si';
+            const options = {
+                roomName: roomName,
+                width: '100%',
+                height: '100%',
+                parentNode: document.getElementById('videoCallContainer'),
+                userInfo: {
+                    displayName: 'Client'
+                },
+                configOverwrite: {
+                    startWithAudioMuted: false,
+                    startWithVideoMuted: false,
+                    enableWelcomePage: false,
+                    enableClosePage: false
+                },
+                interfaceConfigOverwrite: {
+                    APP_NAME: 'Therapy Session',
+                    SHOW_CHROME_EXTENSION_BANNER: false,
+                    MOBILE_APP_PROMO: false,
+                    HIDE_INVITE_MORE_HEADER: true
+                }
+            };
+            
+            jitsiApi = new JitsiMeetExternalAPI(domain, options);
+            
+            // Start timer when therapist joins (for demo purposes)
+            jitsiApi.addListener('participantJoined', (participant) => {
+                if (participant.displayName === 'Therapist') {
+                    startSessionTimer();
+                }
+            });
+            
+            jitsiApi.addListener('readyToClose', () => {
+                endVideoSession();
+            });
+        }
+
+        // Start session timer
+        function startSessionTimer() {
+            if (sessionStartTime) return; // Already started
+            
+            sessionStartTime = new Date();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        // Update timer display
+        function updateTimer() {
+            if (!sessionStartTime) return;
+            
+            const now = new Date();
+            const elapsed = new Date(now - sessionStartTime);
+            
+            const hours = String(elapsed.getUTCHours()).padStart(2, '0');
+            const minutes = String(elapsed.getUTCMinutes()).padStart(2, '0');
+            const seconds = String(elapsed.getUTCSeconds()).padStart(2, '0');
+            
+            document.getElementById('sessionTimer').textContent = `${hours}:${minutes}:${seconds}`;
+            
+            // Automatically end after 1 hour (3600 seconds)
+            const elapsedSeconds = Math.floor((now - sessionStartTime) / 1000);
+            if (elapsedSeconds >= 3600) {
+                endVideoSession();
+            }
+        }
+
+        // End video session
+        function endVideoSession() {
+            if (jitsiApi) {
+                jitsiApi.dispose();
+                jitsiApi = null;
+            }
+            
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            document.getElementById('videoCallContainer').style.display = 'none';
+            document.getElementById('videoCallContainer').innerHTML = '';
+            document.getElementById('roomNumberDisplay').textContent = 'Not connected';
+            document.getElementById('sessionTimer').textContent = '00:00:00';
+            sessionStartTime = null;
+            currentRoomName = null;
         }
         
         // Proceed to payment
