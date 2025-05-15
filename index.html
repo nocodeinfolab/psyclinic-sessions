@@ -418,7 +418,6 @@
                 showErrorMessage(error.message || 'We couldn\'t load your sessions at this time.');
             }
         }
-
         function showLoginRequired() {
             sessionsContainer.innerHTML = `
                 <div class="no-sessions">
@@ -557,6 +556,11 @@
             videoModal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             
+            // Clear previous Jitsi instance if any
+            if (videoContainer.firstChild) {
+                videoContainer.removeChild(videoContainer.firstChild);
+            }
+            
             // Initialize the Jitsi Meet API
             const domain = 'meet.jit.si';
             const options = {
@@ -565,17 +569,28 @@
                 height: '100%',
                 parentNode: videoContainer,
                 userInfo: {
-                    displayName: userEmail || 'Client',
+                    displayName: therapistName ? `Client (${therapistName})` : 'Client',
                 },
                 configOverwrite: {
                     startWithAudioMuted: false,
                     startWithVideoMuted: false,
                     enableWelcomePage: false,
+                    enableClosePage: false,
+                    disableSimulcast: false,
+                    enableNoisyMicDetection: false,
+                    prejoinPageEnabled: false
                 },
                 interfaceConfigOverwrite: {
                     DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
                     HIDE_INVITE_MORE_HEADER: true,
                     MOBILE_APP_PROMO: false,
+                    TOOLBAR_BUTTONS: [
+                        'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                        'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+                        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                        'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+                        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone'
+                    ]
                 }
             };
             
@@ -594,8 +609,15 @@
                 }, callDurationLimit);
                 
                 // Handle when participant leaves
-                jitsiApi.addListener('readyToClose', () => {
+                jitsiApi.on('readyToClose', () => {
                     endVideoCall();
+                });
+                
+                // Notify when connected to the room
+                jitsiApi.on('participantJoined', (participant) => {
+                    if (participant.displayName.includes('Therapist')) {
+                        showNotification('Connected to therapist');
+                    }
                 });
                 
             } catch (error) {
@@ -644,6 +666,13 @@
             callTimer.textContent = '00:00:00';
             callStartTime = null;
         }
+        
+        // Helper function to show notifications
+        function showNotification(message) {
+            // You can implement a notification system here
+            console.log('Notification:', message);
+        }
+
         
         // Proceed to payment
         function proceedToPayment(sessionId) {
