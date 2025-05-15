@@ -551,17 +551,14 @@
         }
         
         // Start Jitsi video call
-        function startVideoCall(roomName, therapistName) {
-            // Show the video modal
+                function startVideoCall(roomName, therapistName) {
             videoModal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             
-            // Clear previous Jitsi instance if any
             if (videoContainer.firstChild) {
                 videoContainer.removeChild(videoContainer.firstChild);
             }
             
-            // Initialize the Jitsi Meet API
             const domain = 'meet.jit.si';
             const options = {
                 roomName: roomName,
@@ -569,16 +566,18 @@
                 height: '100%',
                 parentNode: videoContainer,
                 userInfo: {
-                    displayName: therapistName ? `Client (${therapistName})` : 'Client',
+                    displayName: 'Client',
+                    email: userEmail || 'client@therapy.com'
                 },
                 configOverwrite: {
                     startWithAudioMuted: false,
                     startWithVideoMuted: false,
                     enableWelcomePage: false,
                     enableClosePage: false,
-                    disableSimulcast: false,
+                    disableAuth: true, // This disables authentication requirements
                     enableNoisyMicDetection: false,
-                    prejoinPageEnabled: false
+                    prejoinPageEnabled: false,
+                    requireDisplayName: false
                 },
                 interfaceConfigOverwrite: {
                     DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
@@ -586,10 +585,10 @@
                     MOBILE_APP_PROMO: false,
                     TOOLBAR_BUTTONS: [
                         'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                        'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-                        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                        'hangup', 'profile', 'chat', 'recording',
+                        'settings', 'raisehand',
                         'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-                        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone'
+                        'tileview', 'videobackgroundblur', 'help'
                     ]
                 }
             };
@@ -597,23 +596,19 @@
             try {
                 jitsiApi = new JitsiMeetExternalAPI(domain, options);
                 
-                // Start the call timer
                 callStartTime = new Date();
                 updateTimer();
                 timerInterval = setInterval(updateTimer, 1000);
                 
-                // Set up auto-termination after 1 hour
                 setTimeout(() => {
                     endVideoCall();
                     alert('Your therapy session has automatically ended after 1 hour.');
                 }, callDurationLimit);
                 
-                // Handle when participant leaves
                 jitsiApi.on('readyToClose', () => {
                     endVideoCall();
                 });
                 
-                // Notify when connected to the room
                 jitsiApi.on('participantJoined', (participant) => {
                     if (participant.displayName.includes('Therapist')) {
                         showNotification('Connected to therapist');
